@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing authorization code' })
   }
 
-  const clientId = process.env.NOTION_CLIENT_ID
+  const clientId = process.env.NOTION_CLIENT_ID || process.env.VITE_NOTION_CLIENT_ID
   const clientSecret = process.env.NOTION_CLIENT_SECRET
 
   if (!clientId || !clientSecret) {
