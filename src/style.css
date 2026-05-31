@@ -33,6 +33,7 @@
 }
 html,body{height:100%;overflow:hidden;font-family:var(--font);font-size:13px;color:var(--text-primary);background:#555}
 body{display:flex;align-items:center;justify-content:center;padding:20px}
+#root{display:contents}
 
 .window{
   width:100%;max-width:1400px;height:calc(100vh - 40px);min-height:600px;
