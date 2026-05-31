@@ -158,9 +158,6 @@ function renderFromFileSystem(fs) {
   }
 }
 
-// Initialize
-await loadLocalData()
-
 // Fallback sample data
 const fileData = [
   { name:"Colors", icon:"🎨", kind:"Page", date:"2026-05-20", tags:[{text:"Design",color:"purple"}], size:"2.4 KB", cover:"img-3", subtitle:"Design System · Page",
@@ -474,3 +471,6 @@ document.querySelectorAll('.sidebar-item .chevron').forEach(chevron => {
     }
   });
 });
+
+// Initialize and load local data on load
+await loadLocalData()
