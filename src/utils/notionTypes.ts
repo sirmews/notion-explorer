@@ -27,7 +27,11 @@ export const BlockTypes = {
   TABLE_ROW: 'table_row',
   SYNCED_BLOCK: 'synced_block',
   BREADCRUMB: 'breadcrumb',
-  TEMPLATE: 'template'
+  TEMPLATE: 'template',
+  EQUATION: 'equation',
+  AUDIO: 'audio',
+  TABLE_OF_CONTENTS: 'table_of_contents',
+  LINK_TO_PAGE: 'link_to_page'
 }
 
 // Rich text annotation styles

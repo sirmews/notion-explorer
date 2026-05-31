@@ -92,19 +92,21 @@ export const HeadingBlock: React.FC<{ block: any }> = ({ block }) => {
 }
 
 // Render bulleted list item
-export const BulletedListBlock: React.FC<{ block: any }> = ({ block }) => {
+export const BulletedListBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   return (
     <li className="bulleted">
       <RichText richText={block.richText} />
+      {children && <div className="nested-blocks">{children}</div>}
     </li>
   )
 }
 
 // Render numbered list item
-export const NumberedListBlock: React.FC<{ block: any }> = ({ block }) => {
+export const NumberedListBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   return (
     <li className="numbered">
       <RichText richText={block.richText} />
+      {children && <div className="nested-blocks">{children}</div>}
     </li>
   )
 }
@@ -146,7 +148,7 @@ export const QuoteBlock: React.FC<{ block: any }> = ({ block }) => {
 }
 
 // Render callout block
-export const CalloutBlock: React.FC<{ block: any }> = ({ block }) => {
+export const CalloutBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   const icon = block.icon?.type === 'emoji' ? block.icon.emoji : '💡'
   const bgColor = getBgColor(block.color)
   return (
@@ -154,6 +156,7 @@ export const CalloutBlock: React.FC<{ block: any }> = ({ block }) => {
       <span className="callout-icon">{icon}</span>
       <div className="callout-content">
         <RichText richText={block.richText} />
+        {children && <div className="nested-blocks">{children}</div>}
       </div>
     </div>
   )

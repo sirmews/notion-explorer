@@ -17,16 +17,13 @@ function renderBlockContent(block: any): React.ReactNode {
   // Text components map
   const TextComponent = TextComponents[block.type]
   if (TextComponent) {
-    if (block.type === BlockTypes.TOGGLE) {
-      return (
-        <TextComponent block={block}>
-          {block.children && block.children.length > 0 && (
-            <BlockRenderer blocks={block.children} />
-          )}
-        </TextComponent>
-      )
-    }
-    return <TextComponent block={block} />
+    return (
+      <TextComponent block={block}>
+        {block.children && block.children.length > 0 && (
+          <BlockRenderer blocks={block.children} />
+        )}
+      </TextComponent>
+    )
   }
 
   // Media components & others
@@ -91,9 +88,43 @@ function renderBlockContent(block: any): React.ReactNode {
       ) : null
     case BlockTypes.BREADCRUMB:
       return null
+    case BlockTypes.EQUATION:
+      return (
+        <div className="block-equation">
+          {block.expression || block.equation?.expression ? (
+            <span className="math-expression">{"$$" + (block.expression || block.equation.expression) + "$$"}</span>
+          ) : '$$ $$'}
+        </div>
+      )
+    case BlockTypes.AUDIO:
+      return (
+        <div className="block-audio">
+          <audio src={block.audio?.file?.url || block.audio?.external?.url} controls style={{ width: '100%' }} />
+        </div>
+      )
+    case BlockTypes.TABLE_OF_CONTENTS:
+      return (
+        <div className="block-toc">
+          <div className="toc-title">Table of Contents</div>
+          <div className="toc-placeholder">Outline of headings...</div>
+        </div>
+      )
+    case BlockTypes.LINK_TO_PAGE:
+      return (
+        <div className="block-link-to-page">
+          <a href={`/page?id=${block.link_to_page?.page_id}`} className="child-page-link">
+            <span className="icon">🔗</span>
+            <span className="title">Linked Page reference</span>
+          </a>
+        </div>
+      )
     default:
       console.warn(`No renderer for block type: ${block.type}`)
-      return null
+      return (
+        <div className="unsupported-block">
+          <span className="icon">⚠️</span> Unsupported Block Type: "{block.type}"
+        </div>
+      )
   }
 }
 
