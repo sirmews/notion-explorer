@@ -1,7 +1,8 @@
-import { renderRichText } from './text'
+import React from 'react'
+import { RichText } from './TextBlock'
 
 // Language display names
-const languageNames = {
+const languageNames: Record<string, string> = {
   javascript: 'JavaScript',
   typescript: 'TypeScript',
   python: 'Python',
@@ -33,7 +34,7 @@ const languageNames = {
 }
 
 // Simple syntax highlighting (basic patterns)
-const syntaxPatterns = {
+const syntaxPatterns: Record<string, Array<{ pattern: RegExp; class: string }>> = {
   javascript: [
     { pattern: /(\/\/.*$)/gm, class: 'comment' },
     { pattern: /(\/\*[\s\S]*?\*\/)/g, class: 'comment' },
@@ -49,17 +50,31 @@ const syntaxPatterns = {
     { pattern: /\b(def|class|return|if|elif|else|for|while|break|continue|pass|import|from|as|with|try|except|finally|raise|yield|lambda|and|or|not|is|in|True|False|None|self|print)\b/g, class: 'keyword' },
     { pattern: /\b(\d+\.?\d*)\b/g, class: 'number' },
   ],
-  // Add more languages as needed
+}
+
+// Escape HTML helper
+function escapeHtml(text: string): string {
+  if (typeof document === 'undefined') {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
 }
 
 // Apply basic syntax highlighting
-function highlightSyntax(code, language) {
+function highlightSyntax(code: string, language: string): string {
   const patterns = syntaxPatterns[language]
   if (!patterns) return escapeHtml(code)
 
   let result = escapeHtml(code)
 
-  // Simple highlighting - in production, use a proper library like Prism.js
+  // Simple highlighting
   for (const { pattern, class: className } of patterns) {
     result = result.replace(pattern, `<span class="syntax-${className}">$1</span>`)
   }
@@ -67,28 +82,36 @@ function highlightSyntax(code, language) {
   return result
 }
 
-// Render code block
-export function renderCode(block) {
+// Render code block as React component
+export const CodeBlock: React.FC<{ block: any }> = ({ block }) => {
   const code = block.plainText || ''
   const language = block.language || 'plaintext'
-  const caption = block.caption ? renderRichText(block.caption) : ''
+  const hasCaption = !!block.caption && block.caption.length > 0
   const langDisplay = languageNames[language] || language
 
-  return `
-    <div class="code-block">
-      <div class="code-header">
-        <span class="code-language">${escapeHtml(langDisplay)}</span>
-        <button class="code-copy" onclick="navigator.clipboard.writeText(this.closest('.code-block').querySelector('code').textContent)">Copy</button>
-      </div>
-      <pre><code class="language-${escapeHtml(language)}">${highlightSyntax(code, language)}</code></pre>
-      ${caption ? `<div class="code-caption">${caption}</div>` : ''}
-    </div>
-  `
-}
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code)
+  }
 
-// Escape HTML
-function escapeHtml(text) {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
+  return (
+    <div className="code-block">
+      <div className="code-header">
+        <span className="code-language">{langDisplay}</span>
+        <button className="code-copy" onClick={handleCopy}>
+          Copy
+        </button>
+      </div>
+      <pre>
+        <code
+          className={`language-${language}`}
+          dangerouslySetInnerHTML={{ __html: highlightSyntax(code, language) }}
+        />
+      </pre>
+      {hasCaption && (
+        <div className="code-caption">
+          <RichText richText={block.caption} />
+        </div>
+      )}
+    </div>
+  )
 }

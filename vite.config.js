@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import syncHandler from './api/notion/sync.js'
@@ -38,6 +39,7 @@ export default defineConfig({
   },
   // Custom plugin to add token exchange endpoint
   plugins: [
+    react(),
     {
       name: 'notion-token-exchange',
       configureServer(server) {
