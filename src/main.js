@@ -106,6 +106,225 @@ let fileSystemData = null
 let allFileData = []
 let searchInput = null
 
+// Navigation history
+let navigationHistory = []
+let historyIndex = -1
+
+function resetHistory() {
+  navigationHistory = []
+  historyIndex = -1
+}
+
+// Breadcrumbs pathbar helper for synced items
+function getSyncedPath(item) {
+  const path = []
+  let current = item
+
+  while (current) {
+    path.unshift(current)
+
+    let parentId = null
+    if (current.parent) {
+      if (current.parent.type === 'page_id') {
+        parentId = current.parent.page_id
+      } else if (current.parent.type === 'database_id') {
+        parentId = current.parent.database_id
+      }
+    }
+
+    if (parentId && fileSystemData) {
+      const parentPage = fileSystemData.pages.find(p => p.id === parentId)
+      const parentDb = fileSystemData.databases.find(d => d.id === parentId)
+      const parentItem = parentPage || parentDb
+
+      if (parentItem) {
+        current = {
+          id: parentItem.id,
+          name: parentItem.title || parentItem.name,
+          parent: parentItem.parent
+        }
+      } else {
+        current = null
+      }
+    } else {
+      current = null
+    }
+  }
+
+  path.unshift({ name: 'Workspace', isRoot: true })
+  return path
+}
+
+// Update the dynamic path bar
+function updatePathBar(item) {
+  const pathbar = document.querySelector('.pathbar')
+  if (!pathbar) return
+
+  let pathItems = []
+
+  if (item) {
+    if (item.id) {
+      pathItems = getSyncedPath(item)
+    } else {
+      pathItems.push({ name: 'Workspace', isRoot: true })
+      let parentName = ''
+      if (item.subtitle && item.subtitle.includes('·')) {
+        const parts = item.subtitle.split('·')
+        parentName = parts[0].trim()
+      }
+      if (parentName) {
+        pathItems.push({ name: parentName })
+      }
+      pathItems.push({ name: item.name, id: item.id })
+    }
+  } else {
+    pathItems.push({ name: 'Workspace', isRoot: true })
+  }
+
+  pathbar.innerHTML = pathItems.map((pi, idx) => {
+    const isLast = idx === pathItems.length - 1
+    const classes = ['pathbar-item']
+    if (isLast) classes.push('current')
+    return `<span class="${classes.join(' ')}" data-id="${pi.id || ''}" data-name="${pi.name || ''}">${pi.name}</span>`
+  }).join('<span class="pathbar-sep">›</span>')
+
+  pathbar.querySelectorAll('.pathbar-item').forEach(span => {
+    span.addEventListener('click', () => {
+      const id = span.getAttribute('data-id')
+      const name = span.getAttribute('data-name')
+      if (name === 'Workspace') {
+        if (allFileData.length > 0) {
+          selectItem(allFileData[0])
+        }
+        return
+      }
+
+      let targetItem = null
+      if (id) {
+        targetItem = allFileData.find(f => f.id === id)
+      }
+      if (!targetItem && name) {
+        targetItem = allFileData.find(f => f.name === name)
+      }
+
+      if (targetItem) {
+        selectItem(targetItem)
+      }
+    })
+  })
+}
+
+// History stack logic
+function pushToHistory(item) {
+  if (!item) return
+
+  if (historyIndex < navigationHistory.length - 1) {
+    navigationHistory = navigationHistory.slice(0, historyIndex + 1)
+  }
+
+  const currentEntry = navigationHistory[historyIndex]
+  const itemIdentifier = { id: item.id || null, name: item.name }
+  if (currentEntry && currentEntry.id === itemIdentifier.id && currentEntry.name === itemIdentifier.name) {
+    return
+  }
+
+  navigationHistory.push(itemIdentifier)
+  historyIndex = navigationHistory.length - 1
+
+  updateNavigationButtons()
+}
+
+function updateNavigationButtons() {
+  const backBtn = document.querySelector('[title="Back"]')
+  const forwardBtn = document.querySelector('[title="Forward"]')
+
+  if (backBtn) {
+    const canGoBack = historyIndex > 0
+    if (canGoBack) {
+      backBtn.removeAttribute('disabled')
+      backBtn.classList.remove('disabled')
+      backBtn.style.opacity = '1'
+      backBtn.style.pointerEvents = 'auto'
+    } else {
+      backBtn.setAttribute('disabled', 'true')
+      backBtn.classList.add('disabled')
+      backBtn.style.opacity = '0.4'
+      backBtn.style.pointerEvents = 'none'
+    }
+  }
+
+  if (forwardBtn) {
+    const canGoForward = historyIndex < navigationHistory.length - 1
+    if (canGoForward) {
+      forwardBtn.removeAttribute('disabled')
+      forwardBtn.classList.remove('disabled')
+      forwardBtn.style.opacity = '1'
+      forwardBtn.style.pointerEvents = 'auto'
+    } else {
+      forwardBtn.setAttribute('disabled', 'true')
+      forwardBtn.classList.add('disabled')
+      forwardBtn.style.opacity = '0.4'
+      forwardBtn.style.pointerEvents = 'none'
+    }
+  }
+}
+
+function findItemFromHistoryEntry(entry) {
+  if (!entry) return null
+  if (entry.id) {
+    return allFileData.find(f => f.id === entry.id)
+  }
+  return allFileData.find(f => f.name === entry.name)
+}
+
+function selectItem(item, pushHistory = true) {
+  if (!item) return
+
+  let index = fileData.indexOf(item)
+
+  if (index === -1) {
+    if (searchInput) {
+      searchInput.value = ''
+    }
+    fileData.length = 0
+    fileData.push(...allFileData)
+    index = fileData.indexOf(item)
+  }
+
+  if (index !== -1) {
+    selectedIndex = index
+    renderList()
+    renderPreview(item)
+    updatePathBar(item)
+
+    const selectedRow = fileList.querySelector(`.file-row[data-index="${selectedIndex}"]`)
+    if (selectedRow) {
+      selectedRow.scrollIntoView({ block: 'nearest' })
+    }
+  } else {
+    renderPreview(item)
+    updatePathBar(item)
+  }
+
+  if (pushHistory) {
+    pushToHistory(item)
+  }
+}
+
+function selectItemByIndex(index, pushHistory = true) {
+  if (index < 0 || index >= fileData.length) return
+  selectedIndex = index
+  const item = fileData[selectedIndex]
+
+  renderList()
+  renderPreview(item)
+  updatePathBar(item)
+
+  if (pushHistory) {
+    pushToHistory(item)
+  }
+}
+
 // Load data from OPFS
 async function loadLocalData() {
   const synced = await isSynced()
@@ -126,6 +345,9 @@ async function loadLocalData() {
 
 // Render from file system data
 function renderFromFileSystem(fs) {
+  // Reset history navigation stack when loading a new filesystem structure
+  resetHistory()
+
   // Build flat list for file view
   const allItems = [
     ...fs.pages.map(p => ({
@@ -136,7 +358,8 @@ function renderFromFileSystem(fs) {
       date: p.lastEditedTime || p.createdTime || '',
       tags: [],
       size: '',
-      type: 'page'
+      type: 'page',
+      parent: p.parent
     })),
     ...fs.databases.map(d => ({
       id: d.id,
@@ -146,7 +369,8 @@ function renderFromFileSystem(fs) {
       date: d.lastEditedTime || d.createdTime || '',
       tags: [{text: 'Database', color: 'blue'}],
       size: '',
-      type: 'database'
+      type: 'database',
+      parent: d.parent
     }))
   ]
 
@@ -281,12 +505,19 @@ function filterAndRender(query = '') {
   
   if (fileData.length > 0) {
     selectedIndex = 0;
+    renderList();
+    renderPreview(fileData[selectedIndex]);
+    updatePathBar(fileData[selectedIndex]);
+    if (navigationHistory.length === 0) {
+      pushToHistory(fileData[selectedIndex]);
+    }
   } else {
     selectedIndex = -1;
+    renderList();
+    renderPreview(null);
+    updatePathBar(null);
   }
-  
-  renderList();
-  renderPreview(fileData[selectedIndex]);
+  updateNavigationButtons();
 }
 
 if (searchInput) {
@@ -329,12 +560,12 @@ function renderList() {
 
   document.querySelectorAll('.file-row').forEach(row => {
     row.addEventListener('click', () => {
-      selectedIndex = parseInt(row.dataset.index);
-      renderList();
-      renderPreview(fileData[selectedIndex]);
+      const idx = parseInt(row.dataset.index);
+      selectItemByIndex(idx, true);
     });
     row.addEventListener('dblclick', () => {
-      selectedIndex = parseInt(row.dataset.index);
+      const idx = parseInt(row.dataset.index);
+      selectItemByIndex(idx, true);
       const item = fileData[selectedIndex];
       // Open page in new tab
       if (item && item.id) {
@@ -493,9 +724,12 @@ async function renderPreview(item) {
 }
 
 // Select first item by default
-selectedIndex = 0;
-renderList();
-renderPreview(fileData[0]);
+if (fileData.length > 0) {
+  selectItemByIndex(0, true);
+} else {
+  updatePathBar(null);
+  updateNavigationButtons();
+}
 
 // Context menu
 const contextMenu = document.getElementById('context-menu');
@@ -503,9 +737,8 @@ fileList.addEventListener('contextmenu', e => {
   e.preventDefault();
   const row = e.target.closest('.file-row');
   if (row) {
-    selectedIndex = parseInt(row.dataset.index);
-    renderList();
-    renderPreview(fileData[selectedIndex]);
+    const idx = parseInt(row.dataset.index);
+    selectItemByIndex(idx, true);
   }
   contextMenu.style.left = e.pageX + 'px';
   contextMenu.style.top = e.pageY + 'px';
@@ -518,16 +751,47 @@ document.addEventListener('keydown', e => {
   if (fileData.length === 0) return;
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    selectedIndex = Math.min(selectedIndex + 1, fileData.length - 1);
-    renderList();
-    renderPreview(fileData[selectedIndex]);
+    const nextIdx = Math.min(selectedIndex + 1, fileData.length - 1);
+    selectItemByIndex(nextIdx, true);
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    selectedIndex = Math.max(selectedIndex - 1, 0);
-    renderList();
-    renderPreview(fileData[selectedIndex]);
+    const prevIdx = Math.max(selectedIndex - 1, 0);
+    selectItemByIndex(prevIdx, true);
   }
 });
+
+// Back/Forward button event listeners
+const backBtn = document.querySelector('[title="Back"]');
+if (backBtn) {
+  backBtn.addEventListener('click', () => {
+    if (historyIndex > 0) {
+      historyIndex--;
+      const targetEntry = navigationHistory[historyIndex];
+      const item = findItemFromHistoryEntry(targetEntry);
+      if (item) {
+        selectItem(item, false);
+      } else {
+        updateNavigationButtons();
+      }
+    }
+  });
+}
+
+const forwardBtn = document.querySelector('[title="Forward"]');
+if (forwardBtn) {
+  forwardBtn.addEventListener('click', () => {
+    if (historyIndex < navigationHistory.length - 1) {
+      historyIndex++;
+      const targetEntry = navigationHistory[historyIndex];
+      const item = findItemFromHistoryEntry(targetEntry);
+      if (item) {
+        selectItem(item, false);
+      } else {
+        updateNavigationButtons();
+      }
+    }
+  });
+}
 
 // Sidebar active state
 document.querySelectorAll('.sidebar-item').forEach(item => {
