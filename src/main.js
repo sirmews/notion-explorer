@@ -119,8 +119,16 @@ function resetHistory() {
 function getSyncedPath(item) {
   const path = []
   let current = item
+  const visited = new Set()
 
   while (current) {
+    if (current.id) {
+      if (visited.has(current.id)) {
+        break
+      }
+      visited.add(current.id)
+    }
+
     path.unshift(current)
 
     let parentId = null
@@ -309,6 +317,8 @@ function selectItem(item, pushHistory = true) {
   if (pushHistory) {
     pushToHistory(item)
   }
+
+  updateSidebarSelection(item)
 }
 
 function selectItemByIndex(index, pushHistory = true) {
@@ -323,6 +333,8 @@ function selectItemByIndex(index, pushHistory = true) {
   if (pushHistory) {
     pushToHistory(item)
   }
+
+  updateSidebarSelection(item)
 }
 
 // Load data from OPFS
@@ -376,8 +388,260 @@ function renderFromFileSystem(fs) {
 
   // Update master copy and render
   allFileData = [...allItems]
+  renderSidebarTree()
   const query = searchInput ? searchInput.value : ''
   filterAndRender(query)
+}
+
+function updateSidebarSelection(item) {
+  // Remove active from all sidebar items in the entire sidebar
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.classList.remove('active')
+  })
+
+  if (!item) return
+
+  // Find the sidebar item corresponding to this item inside workspaceSection
+  const workspaceSection = document.getElementById('workspace-section')
+  if (!workspaceSection) return
+
+  let el = null
+  if (item.id) {
+    el = workspaceSection.querySelector(`.sidebar-item[data-id="${item.id}"]`)
+  }
+  if (!el && item.name) {
+    el = workspaceSection.querySelector(`.sidebar-item[data-name="${item.name}"]`)
+  }
+
+  if (el) {
+    el.classList.add('active')
+    
+    // Expand parents
+    let parent = el.parentElement
+    while (parent && parent !== workspaceSection) {
+      if (parent.classList.contains('sidebar-children')) {
+        parent.style.display = ''
+        const folderEl = parent.previousElementSibling
+        if (folderEl && folderEl.classList.contains('sidebar-item')) {
+          const chevron = folderEl.querySelector('.chevron')
+          if (chevron) {
+            chevron.classList.add('open')
+          }
+        }
+      }
+      parent = parent.parentElement
+    }
+  }
+}
+
+function renderSidebarTree() {
+  const workspaceSection = document.getElementById('workspace-section')
+  if (!workspaceSection) return
+
+  workspaceSection.innerHTML = '<div class="sidebar-label">Workspace</div>'
+
+  const isSyncedData = fileSystemData && (fileSystemData.pages?.length > 0 || fileSystemData.databases?.length > 0)
+
+  if (isSyncedData) {
+    // Synced data from OPFS
+    const allIds = new Set([
+      ...fileSystemData.pages.map(p => p.id),
+      ...fileSystemData.databases.map(d => d.id)
+    ])
+
+    const isRootLevel = (item) => {
+      if (!item.parent || item.parent.type === 'workspace') {
+        return true
+      }
+      let parentId = null
+      if (item.parent.type === 'page_id') {
+        parentId = item.parent.page_id
+      } else if (item.parent.type === 'database_id') {
+        parentId = item.parent.database_id
+      }
+      if (parentId && !allIds.has(parentId)) {
+        return true
+      }
+      return false
+    }
+
+    const getChildren = (parentId) => {
+      return allFileData.filter(f => {
+        if (!f.parent) return false
+        let pid = null
+        if (f.parent.type === 'page_id') pid = f.parent.page_id
+        else if (f.parent.type === 'database_id') pid = f.parent.database_id
+        return pid === parentId
+      })
+    }
+
+    const renderedIds = new Set()
+
+    const buildSyncedNode = (item) => {
+      if (renderedIds.has(item.id)) return ''
+      renderedIds.add(item.id)
+
+      const children = getChildren(item.id)
+      const hasChildren = children.length > 0
+
+      let chevronHtml = ''
+      if (hasChildren) {
+        chevronHtml = `<span class="chevron">▶</span>`
+      } else {
+        chevronHtml = `<span class="chevron" style="visibility: hidden;">▶</span>`
+      }
+
+      const icon = item.icon || '📄'
+      const name = item.name || 'Untitled'
+
+      let html = `
+        <div class="sidebar-item" data-id="${item.id}">
+          ${chevronHtml}
+          <span class="icon">${icon}</span>
+          <span class="label">${name}</span>
+        </div>
+      `
+
+      if (hasChildren) {
+        const childrenHtml = children.map(child => buildSyncedNode(child)).join('')
+        html += `
+          <div class="sidebar-children" style="display: none;">
+            ${childrenHtml}
+          </div>
+        `
+      }
+
+      return html
+    }
+
+    const roots = allFileData.filter(item => isRootLevel(item))
+    const treeHtml = roots.map(root => buildSyncedNode(root)).join('')
+    
+    const treeContainer = document.createElement('div')
+    treeContainer.innerHTML = treeHtml
+    workspaceSection.appendChild(treeContainer)
+
+  } else {
+    // Static fallback data
+    const fallbackTree = [
+      {
+        name: 'Projects',
+        icon: '📁',
+        isFolder: true,
+        children: [
+          {
+            name: 'Design System',
+            icon: '📁',
+            isFolder: true,
+            children: [
+              { name: 'Colors' },
+              { name: 'Typography' },
+              { name: 'Components' },
+              { name: 'Brand Guidelines' },
+              { name: 'Icon Set' }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'Databases',
+        icon: '📁',
+        isFolder: true,
+        children: [
+          { name: 'Roadmap' },
+          { name: 'Contacts' }
+        ]
+      },
+      { name: 'Sprint Retrospective' }
+    ]
+
+    const buildFallbackNode = (node) => {
+      if (node.isFolder) {
+        const chevronHtml = `<span class="chevron">▶</span>`
+        const icon = node.icon || '📁'
+        const childrenHtml = node.children.map(child => buildFallbackNode(child)).join('')
+
+        return `
+          <div class="sidebar-item folder" data-folder-name="${node.name}">
+            ${chevronHtml}
+            <span class="icon">${icon}</span>
+            <span class="label">${node.name}</span>
+          </div>
+          <div class="sidebar-children" style="display: none;">
+            ${childrenHtml}
+          </div>
+        `
+      } else {
+        const backingItem = allFileData.find(f => f.name === node.name)
+        const icon = backingItem ? (backingItem.icon || '📄') : '📄'
+        const id = backingItem ? (backingItem.id || '') : ''
+
+        return `
+          <div class="sidebar-item" data-name="${node.name}" data-id="${id}">
+            <span class="chevron" style="visibility: hidden;">▶</span>
+            <span class="icon">${icon}</span>
+            <span class="label">${node.name}</span>
+          </div>
+        `
+      }
+    }
+
+    const treeHtml = fallbackTree.map(node => buildFallbackNode(node)).join('')
+    
+    const treeContainer = document.createElement('div')
+    treeContainer.innerHTML = treeHtml
+    workspaceSection.appendChild(treeContainer)
+  }
+
+  // Connect events
+  const toggleChildren = (itemEl) => {
+    const chevron = itemEl.querySelector('.chevron')
+    if (chevron) {
+      chevron.classList.toggle('open')
+    }
+    const children = itemEl.nextElementSibling
+    if (children && children.classList.contains('sidebar-children')) {
+      children.style.display = children.style.display === 'none' ? '' : 'none'
+    }
+  }
+
+  const sidebarItems = workspaceSection.querySelectorAll('.sidebar-item')
+  sidebarItems.forEach(itemEl => {
+    itemEl.addEventListener('click', (e) => {
+      const isChevron = e.target.classList.contains('chevron')
+      if (isChevron) {
+        e.stopPropagation()
+        toggleChildren(itemEl)
+        return
+      }
+
+      const isFolder = itemEl.classList.contains('folder')
+      if (isFolder) {
+        toggleChildren(itemEl)
+        return
+      }
+
+      const id = itemEl.getAttribute('data-id')
+      const name = itemEl.getAttribute('data-name')
+
+      let targetItem = null
+      if (id) {
+        targetItem = allFileData.find(f => f.id === id)
+      } else if (name) {
+        targetItem = allFileData.find(f => f.name === name)
+      }
+
+      if (targetItem) {
+        selectItem(targetItem)
+      }
+    })
+  })
+
+  // Set active selection highlight
+  const selectedItem = selectedIndex !== -1 ? fileData[selectedIndex] : null
+  if (selectedItem) {
+    updateSidebarSelection(selectedItem)
+  }
 }
 
 // Fallback sample data
@@ -511,11 +775,13 @@ function filterAndRender(query = '') {
     if (navigationHistory.length === 0) {
       pushToHistory(fileData[selectedIndex]);
     }
+    updateSidebarSelection(fileData[selectedIndex]);
   } else {
     selectedIndex = -1;
     renderList();
     renderPreview(null);
     updatePathBar(null);
+    updateSidebarSelection(null);
   }
   updateNavigationButtons();
 }
@@ -722,6 +988,9 @@ async function renderPreview(item) {
     contentEl.innerHTML = item.content;
   }
 }
+
+// Render the initial workspace sidebar tree
+renderSidebarTree();
 
 // Select first item by default
 if (fileData.length > 0) {
