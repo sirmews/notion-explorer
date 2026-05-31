@@ -25,15 +25,7 @@ function initDB() {
 
 // Get OPFS root
 async function getRoot() {
-  if (root) return root
-  if (navigator.storage?.getDirectory) {
-    try {
-      root = await navigator.storage.getDirectory()
-      return root
-    } catch (e) {
-      console.warn('OPFS not available, falling back to IndexedDB')
-    }
-  }
+  // Always return null to use IndexedDB as the primary, transparent, and debuggable storage engine
   return null
 }
 
