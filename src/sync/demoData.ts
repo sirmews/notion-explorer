@@ -1,4 +1,4 @@
-import { writeFile, setMetadata } from './opfs.js'
+import { writeFile, setMetadata } from './opfs'
 
 export async function loadDemoWorkspace() {
   const syncTime = new Date().toISOString()
@@ -163,9 +163,9 @@ export async function loadDemoWorkspace() {
           rich_text: [{
             type: 'text',
             text: {
-              content: `// Dynamic local cache loading with fallback\nimport { loadPage } from './sync/notionSync.js';\n\nasync function displayPreview(pageId) {\n  const cachedPage = await loadPage(pageId);\n  if (cachedPage) {\n    renderBlocks(cachedPage.blocks);\n  } else {\n    console.log('Loading from Notion API...');\n  }\n}`
+              content: `// Dynamic local cache loading with fallback\nimport { loadPage } from './sync/notionSync';\n\nasync function displayPreview(pageId) {\n  const cachedPage = await loadPage(pageId);\n  if (cachedPage) {\n    renderBlocks(cachedPage.blocks);\n  } else {\n    console.log('Loading from Notion API...');\n  }\n}`
             },
-            plain_text: `// Dynamic local cache loading with fallback\nimport { loadPage } from './sync/notionSync.js';\n\nasync function displayPreview(pageId) {\n  const cachedPage = await loadPage(pageId);\n  if (cachedPage) {\n    renderBlocks(cachedPage.blocks);\n  } else {\n    console.log('Loading from Notion API...');\n  }\n}`
+            plain_text: `// Dynamic local cache loading with fallback\nimport { loadPage } from './sync/notionSync';\n\nasync function displayPreview(pageId) {\n  const cachedPage = await loadPage(pageId);\n  if (cachedPage) {\n    renderBlocks(cachedPage.blocks);\n  } else {\n    console.log('Loading from Notion API...');\n  }\n}`
           }]
         }
       }

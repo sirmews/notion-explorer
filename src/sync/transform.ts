@@ -1,4 +1,4 @@
-import { getPageTitle, getPageIcon, getCoverUrl, PropertyTypes } from '../utils/notionTypes.js'
+import { getPageTitle, getPageIcon, getCoverUrl, PropertyTypes } from '../utils/notionTypes'
 
 // Transform Notion page to our local format
 export function transformPage(page) {
@@ -37,7 +37,7 @@ export function transformDatabase(db) {
 
 // Transform database entry (page in database)
 export function transformDatabaseEntry(page, databaseSchema) {
-  const entry = transformPage(page)
+  const entry: any = transformPage(page)
   entry.type = 'database_entry'
   entry.databaseId = page.parent?.database_id
   return entry
@@ -48,10 +48,11 @@ export function transformDatabaseSchema(properties) {
   if (!properties) return {}
   const schema = {}
   for (const [key, prop] of Object.entries(properties)) {
+    const p = prop as any
     schema[key] = {
-      id: prop.id,
-      name: prop.name,
-      type: prop.type,
+      id: p.id,
+      name: p.name,
+      type: p.type,
       config: getPropertyConfig(prop)
     }
   }
@@ -92,7 +93,7 @@ function transformProperties(properties) {
 
 // Transform a single property value
 function transformPropertyValue(prop) {
-  const value = {
+  const value: any = {
     type: prop.type,
     id: prop.id
   }
@@ -138,7 +139,7 @@ function transformPropertyValue(prop) {
       value.email = prop.email
       value.text = prop.email || ''
       break
-    case PropertyTypes.PHONE_NUMBER:
+    case PropertyTypes.PHONE:
       value.phone = prop.phone_number
       value.text = prop.phone_number || ''
       break
@@ -192,7 +193,7 @@ export function transformBlocks(blocks) {
 
 // Transform single block
 export function transformBlock(block) {
-  const result = {
+  const result: any = {
     id: block.id,
     type: block.type,
     hasChildren: block.has_children || false,

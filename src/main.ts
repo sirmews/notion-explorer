@@ -1,10 +1,10 @@
 import './style.css'
-import { isConnected, redirectToNotion, handleCallback, exchangeCode } from './auth/oauth.js'
-import { syncWorkspace, loadFileSystem, loadPage, loadDatabase, isSynced, getSyncStatus } from './sync/notionSync.js'
-import { renderBlocks } from './components/blockRenderer.js'
-import { renderDatabase } from './renderers/database.js'
-import { loadDemoWorkspace } from './sync/demoData.js'
-import { getMetadata } from './sync/opfs.js'
+import { isConnected, redirectToNotion, handleCallback, exchangeCode } from './auth/oauth'
+import { syncWorkspace, loadFileSystem, loadPage, loadDatabase, isSynced, getSyncStatus } from './sync/notionSync'
+import { renderBlocks } from './components/blockRenderer'
+import { renderDatabase } from './renderers/database'
+import { loadDemoWorkspace } from './sync/demoData'
+import { getMetadata } from './sync/opfs'
 
 // Handle OAuth callback
 const callbackResult = handleCallback()
@@ -243,8 +243,8 @@ function pushToHistory(item) {
 }
 
 function updateNavigationButtons() {
-  const backBtn = document.querySelector('[title="Back"]')
-  const forwardBtn = document.querySelector('[title="Forward"]')
+  const backBtn = document.querySelector('[title="Back"]') as HTMLElement
+  const forwardBtn = document.querySelector('[title="Forward"]') as HTMLElement
 
   if (backBtn) {
     const canGoBack = historyIndex > 0
@@ -608,7 +608,7 @@ function renderSidebarTree() {
   const sidebarItems = workspaceSection.querySelectorAll('.sidebar-item')
   sidebarItems.forEach(itemEl => {
     itemEl.addEventListener('click', (e) => {
-      const isChevron = e.target.classList.contains('chevron')
+      const isChevron = (e.target as HTMLElement).classList.contains('chevron')
       if (isChevron) {
         e.stopPropagation()
         toggleChildren(itemEl)
@@ -824,7 +824,8 @@ function renderList() {
     </div>
   `).join('');
 
-  document.querySelectorAll('.file-row').forEach(row => {
+  document.querySelectorAll('.file-row').forEach(r => {
+    const row = r as HTMLElement;
     row.addEventListener('click', () => {
       const idx = parseInt(row.dataset.index);
       selectItemByIndex(idx, true);
@@ -832,7 +833,7 @@ function renderList() {
     row.addEventListener('dblclick', () => {
       const idx = parseInt(row.dataset.index);
       selectItemByIndex(idx, true);
-      const item = fileData[selectedIndex];
+      const item = fileData[selectedIndex] as any;
       // Open page in new tab
       if (item && item.id) {
         window.open(`/page.html?id=${item.id}`, '_blank');
@@ -843,7 +844,7 @@ function renderList() {
 
 async function renderPreview(item) {
   if (!item) {
-    const coverEl = preview.querySelector('.preview-cover');
+    const coverEl = preview.querySelector('.preview-cover') as HTMLElement;
     if (coverEl) {
       coverEl.style.backgroundImage = '';
       coverEl.className = 'preview-cover img-1';
@@ -865,22 +866,24 @@ async function renderPreview(item) {
         </div>
       `;
     }
-    const actionBtn = preview.querySelector('.preview-action');
+    const actionBtn = preview.querySelector('.preview-action') as HTMLElement;
     if (actionBtn) actionBtn.style.display = 'none';
     return;
   }
 
-  const actionBtn = preview.querySelector('.preview-action');
+  const actionBtn = preview.querySelector('.preview-action') as HTMLElement;
   if (actionBtn) actionBtn.style.display = '';
 
   // Set cover background if item has an external or file url cover, otherwise fallback to class
-  const coverEl = preview.querySelector('.preview-cover');
-  if (item.cover && (item.cover.startsWith('http://') || item.cover.startsWith('https://'))) {
-    coverEl.className = 'preview-cover';
-    coverEl.style.backgroundImage = `url(${item.cover})`;
-  } else {
-    coverEl.style.backgroundImage = '';
-    coverEl.className = 'preview-cover ' + (item.cover || 'img-1');
+  const coverEl = preview.querySelector('.preview-cover') as HTMLElement;
+  if (coverEl) {
+    if (item.cover && (item.cover.startsWith('http://') || item.cover.startsWith('https://'))) {
+      coverEl.className = 'preview-cover';
+      coverEl.style.backgroundImage = `url(${item.cover})`;
+    } else {
+      coverEl.style.backgroundImage = '';
+      coverEl.className = 'preview-cover ' + (item.cover || 'img-1');
+    }
   }
 
   preview.querySelector('.preview-icon').textContent = item.icon || '📄';
@@ -915,14 +918,15 @@ async function renderPreview(item) {
           // Read page properties
           if (pageData.properties) {
             for (const [name, prop] of Object.entries(pageData.properties)) {
-              if (prop.type === 'status' && prop.status) {
-                const color = prop.status.color || 'gray';
-                props.push({ l: name, v: `<span class="tag ${color}">${prop.status.name}</span>` });
-              } else if (prop.type === 'select' && prop.select) {
-                const color = prop.select.color || 'gray';
-                props.push({ l: name, v: `<span class="tag ${color}">${prop.select.name}</span>` });
-              } else if (prop.type === 'multi_select' && prop.multi_select?.length > 0) {
-                const tagsHtml = prop.multi_select.map(sel => `<span class="tag ${sel.color || 'gray'}">${sel.name}</span>`).join(' ');
+              const p = prop as any;
+              if (p.type === 'status' && p.status) {
+                const color = p.status.color || 'gray';
+                props.push({ l: name, v: `<span class="tag ${color}">${p.status.name}</span>` });
+              } else if (p.type === 'select' && p.select) {
+                const color = p.select.color || 'gray';
+                props.push({ l: name, v: `<span class="tag ${color}">${p.select.name}</span>` });
+              } else if (p.type === 'multi_select' && p.multi_select?.length > 0) {
+                const tagsHtml = p.multi_select.map((sel: any) => `<span class="tag ${sel.color || 'gray'}">${sel.name}</span>`).join(' ');
                 props.push({ l: name, v: tagsHtml });
               }
             }
@@ -1002,18 +1006,20 @@ if (fileData.length > 0) {
 
 // Context menu
 const contextMenu = document.getElementById('context-menu');
-fileList.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  const row = e.target.closest('.file-row');
-  if (row) {
-    const idx = parseInt(row.dataset.index);
-    selectItemByIndex(idx, true);
-  }
-  contextMenu.style.left = e.pageX + 'px';
-  contextMenu.style.top = e.pageY + 'px';
-  contextMenu.classList.add('show');
-});
-document.addEventListener('click', () => contextMenu.classList.remove('show'));
+if (contextMenu) {
+  fileList.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const row = (e.target as HTMLElement).closest('.file-row') as HTMLElement;
+    if (row) {
+      const idx = parseInt(row.dataset.index);
+      selectItemByIndex(idx, true);
+    }
+    contextMenu.style.left = e.pageX + 'px';
+    contextMenu.style.top = e.pageY + 'px';
+    contextMenu.classList.add('show');
+  });
+  document.addEventListener('click', () => contextMenu.classList.remove('show'));
+}
 
 // Keyboard navigation
 document.addEventListener('keydown', e => {
@@ -1074,7 +1080,7 @@ document.querySelectorAll('.sidebar-item').forEach(item => {
 document.querySelectorAll('.sidebar-item .chevron').forEach(chevron => {
   chevron.parentElement.addEventListener('click', e => {
     chevron.classList.toggle('open');
-    const children = chevron.closest('.sidebar-item')?.nextElementSibling;
+    const children = chevron.closest('.sidebar-item')?.nextElementSibling as HTMLElement;
     if (children && children.classList.contains('sidebar-children')) {
       children.style.display = children.style.display === 'none' ? '' : 'none';
     }
@@ -1084,8 +1090,8 @@ document.querySelectorAll('.sidebar-item .chevron').forEach(chevron => {
 // Draggable Sidebars / Resizers
 const resizeLeft = document.getElementById('resize-left');
 const resizeRight = document.getElementById('resize-right');
-const sidebar = document.querySelector('.sidebar');
-const previewPanel = document.querySelector('.preview');
+const sidebar = document.querySelector('.sidebar') as HTMLElement;
+const previewPanel = document.querySelector('.preview') as HTMLElement;
 
 if (resizeLeft && sidebar) {
   resizeLeft.addEventListener('mousedown', (e) => {

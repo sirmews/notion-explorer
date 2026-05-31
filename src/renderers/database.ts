@@ -1,4 +1,4 @@
-import { renderRichText } from './text.js'
+import { renderRichText } from './text'
 
 // Render database as a table view
 export function renderDatabase(database, entries = []) {
@@ -13,7 +13,8 @@ export function renderDatabase(database, entries = []) {
 
   // Filter to displayable properties
   const displayProps = props.filter(([key, prop]) => {
-    const type = prop.type
+    const p = prop as any
+    const type = p.type
     return !['files', 'relation', 'rollup', 'created_time', 'created_by', 'last_edited_time', 'last_edited_by'].includes(type)
   }).slice(0, 6) // Limit to 6 columns
 
@@ -23,7 +24,7 @@ export function renderDatabase(database, entries = []) {
         <thead>
           <tr>
             ${displayProps.map(([key, prop]) => `
-              <th class="database-header">${escapeHtml(prop.name)}</th>
+              <th class="database-header">${escapeHtml((prop as any).name)}</th>
             `).join('')}
           </tr>
         </thead>

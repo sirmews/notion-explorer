@@ -1,4 +1,4 @@
-import { BlockTypes } from '../utils/notionTypes.js'
+import { BlockTypes } from '../utils/notionTypes'
 
 // Render rich text with annotations
 export function renderRichText(richTextArray) {

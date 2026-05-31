@@ -119,8 +119,9 @@ export function getPageTitle(page) {
 
   // Find the title property
   for (const [key, prop] of Object.entries(page.properties)) {
-    if (prop.type === 'title') {
-      return prop.title?.map(t => t.plain_text).join('') || 'Untitled'
+    const p = prop as any
+    if (p.type === 'title') {
+      return p.title?.map(t => t.plain_text).join('') || 'Untitled'
     }
   }
   return 'Untitled'

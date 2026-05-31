@@ -1,6 +1,6 @@
-import { loadPage, loadDatabase, loadFileSystem } from './sync/notionSync.js'
-import { renderBlocks } from './components/blockRenderer.js'
-import { renderDatabase } from './renderers/database.js'
+import { loadPage, loadDatabase, loadFileSystem } from './sync/notionSync'
+import { renderBlocks } from './components/blockRenderer'
+import { renderDatabase } from './renderers/database'
 
 // Get page ID from URL
 function getPageId() {

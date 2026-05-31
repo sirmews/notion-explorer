@@ -1,4 +1,4 @@
-import { renderRichText } from './text.js'
+import { renderRichText } from './text'
 
 // Get file URL from Notion file object
 function getFileUrl(fileObj) {

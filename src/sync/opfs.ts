@@ -15,7 +15,7 @@ function initDB() {
       resolve(db)
     }
     request.onupgradeneeded = (event) => {
-      const database = event.target.result
+      const database = (event.target as any).result
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME)
       }

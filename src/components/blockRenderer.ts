@@ -1,8 +1,8 @@
-import { BlockTypes } from '../utils/notionTypes.js'
-import { textRenderers, renderRichText } from '../renderers/text.js'
-import { renderImage, renderVideo, renderFile, renderPDF, renderBookmark, renderEmbed, renderLinkPreview } from '../renderers/media.js'
-import { renderCode } from '../renderers/code.js'
-import { renderDatabase } from '../renderers/database.js'
+import { BlockTypes } from '../utils/notionTypes'
+import { textRenderers, renderRichText } from '../renderers/text'
+import { renderImage, renderVideo, renderFile, renderPDF, renderBookmark, renderEmbed, renderLinkPreview } from '../renderers/media'
+import { renderCode } from '../renderers/code'
+import { renderDatabase } from '../renderers/database'
 
 // Main block renderer
 export function renderBlocks(blocks) {

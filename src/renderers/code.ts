@@ -1,4 +1,4 @@
-import { renderRichText } from './text.js'
+import { renderRichText } from './text'
 
 // Language display names
 const languageNames = {

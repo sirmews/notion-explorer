@@ -1,5 +1,5 @@
-import { readFile, writeFile, getMetadata, setMetadata } from './opfs.js'
-import { getStoredTokens } from '../auth/oauth.js'
+import { readFile, writeFile, getMetadata, setMetadata } from './opfs'
+import { getStoredTokens } from '../auth/oauth'
 
 // Sync status
 let syncInProgress = false
@@ -256,8 +256,9 @@ export async function getLastSyncTime() {
 function getPageTitle(page) {
   if (!page.properties) return 'Untitled'
   for (const [key, prop] of Object.entries(page.properties)) {
-    if (prop.type === 'title') {
-      return prop.title?.map(t => t.plain_text).join('') || 'Untitled'
+    const p = prop as any
+    if (p.type === 'title') {
+      return p.title?.map(t => t.plain_text).join('') || 'Untitled'
     }
   }
   return 'Untitled'
