@@ -1290,5 +1290,24 @@ if (loadDemoBtn) {
   });
 }
 
+// Listen to dynamic on-demand filesystem child node additions
+window.addEventListener('filesystem-updated', async () => {
+  console.log('Local filesystem updated with on-demand child nodes. Refreshing view...');
+  const fs: any = await loadFileSystem();
+  if (fs) {
+    fileSystemData = fs;
+    const activeItem: any = selectedIndex !== -1 ? fileData[selectedIndex] : null;
+
+    renderFromFileSystem(fs);
+
+    if (activeItem) {
+      const matched = allFileData.find(f => (f as any).id === activeItem.id || f.name === activeItem.name);
+      if (matched) {
+        selectItem(matched, false); // select without pushing duplicates to back/forward history
+      }
+    }
+  }
+});
+
 // Initialize and load local data on load
 await loadLocalData()

@@ -166,6 +166,97 @@ export async function loadFileSystem() {
   return readFile('/filesystem.json')
 }
 
+async function registerChildNodes(parentId: string, blocks: any[]) {
+  if (!blocks || blocks.length === 0) return false
+
+  let fsModified = false
+  const fs: any = await readFile('/filesystem.json') || { pages: [], databases: [] }
+
+  const scanBlocks = async (blockList: any[]) => {
+    for (const block of blockList) {
+      if (block.type === 'child_page' && block.child_page) {
+        const childId = block.id
+        const childTitle = block.child_page.title || 'Untitled'
+        
+        // Add if not already present in filesystem.json
+        const exists = fs.pages.some((p: any) => p.id === childId)
+        if (!exists) {
+          fs.pages.push({
+            id: childId,
+            title: childTitle,
+            icon: '📄',
+            parent: { type: 'page_id', page_id: parentId },
+            hasChildren: block.has_children
+          })
+          
+          // Write placeholder page JSON
+          await writeFile(`/pages/${childId}.json`, {
+            id: childId,
+            type: 'page',
+            title: childTitle,
+            icon: '📄',
+            cover: null,
+            properties: {},
+            parent: { type: 'page_id', page_id: parentId },
+            createdTime: new Date().toISOString(),
+            lastEditedTime: new Date().toISOString(),
+            blocks: [],
+            url: `https://notion.so/${childId.replace(/-/g, '')}`
+          })
+          
+          fsModified = true
+        }
+      } else if (block.type === 'child_database' && block.child_database) {
+        const childId = block.id
+        const childTitle = block.child_database.title || 'Untitled'
+        
+        // Add if not already present in filesystem.json
+        const exists = fs.databases.some((d: any) => d.id === childId)
+        if (!exists) {
+          fs.databases.push({
+            id: childId,
+            title: childTitle,
+            icon: '📋',
+            parent: { type: 'page_id', page_id: parentId }
+          })
+          
+          // Write placeholder database JSON
+          await writeFile(`/databases/${childId}.json`, {
+            id: childId,
+            type: 'database',
+            title: childTitle,
+            icon: '📋',
+            cover: null,
+            description: [],
+            properties: {},
+            parent: { type: 'page_id', page_id: parentId },
+            createdTime: new Date().toISOString(),
+            lastEditedTime: new Date().toISOString(),
+            entries: [],
+            url: `https://notion.so/${childId.replace(/-/g, '')}`
+          })
+          
+          fsModified = true
+        }
+      }
+
+      // Recurse if the block has loaded children (e.g. from sync)
+      if (block.children) {
+        await scanBlocks(block.children)
+      }
+    }
+  }
+
+  await scanBlocks(blocks)
+
+  if (fsModified) {
+    await writeFile('/filesystem.json', fs)
+    return true
+  }
+
+  return false
+}
+
 // Load page data
 export async function loadPage(pageId) {
   const pageData = await readFile(`/pages/${pageId}.json`)
@@ -192,6 +283,12 @@ export async function loadPage(pageId) {
             pageData.blocks = result.blocks
             // Cache back to local storage
             await writeFile(`/pages/${pageId}.json`, pageData)
+
+            // Register any dynamic child pages/databases
+            const fsModified = await registerChildNodes(pageId, result.blocks)
+            if (fsModified) {
+              window.dispatchEvent(new CustomEvent('filesystem-updated', { detail: { pageId } }))
+            }
           }
         }
       } catch (err) {

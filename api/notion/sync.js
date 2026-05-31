@@ -10,10 +10,10 @@ function getClient(accessToken) {
 
 // Fetch all pages and databases
 async function fetchWorkspace(notion) {
-  const pages = []
-  const databases = []
+  const allPages = []
+  const allDatabases = []
 
-  // Search for all pages and databases
+  // Search for all pages
   let cursor = undefined
   let hasMore = true
 
@@ -29,7 +29,7 @@ async function fetchWorkspace(notion) {
 
     for (const item of response.results) {
       if (item.object === 'page') {
-        pages.push(item)
+        allPages.push(item)
       }
     }
 
@@ -53,13 +53,37 @@ async function fetchWorkspace(notion) {
 
     for (const item of response.results) {
       if (item.object === 'database') {
-        databases.push(item)
+        allDatabases.push(item)
       }
     }
 
     hasMore = response.has_more
     cursor = response.next_cursor
   }
+
+  const allIds = new Set([
+    ...allPages.map(p => p.id),
+    ...allDatabases.map(d => d.id)
+  ])
+
+  // Filter root/top-level items (parent is workspace/teamspace OR parent is not in our shared list)
+  const isTopLevel = (item) => {
+    if (!item.parent || item.parent.type === 'workspace' || item.parent.type === 'teamspace') {
+      return true
+    }
+    let parentId = null
+    if (item.parent.type === 'page_id') {
+      parentId = item.parent.page_id
+    } else if (item.parent.type === 'database_id') {
+      parentId = item.parent.database_id
+    }
+    
+    // If parent ID is not in our shared list, treat this as root for the integration
+    return !parentId || !allIds.has(parentId)
+  }
+
+  const pages = allPages.filter(p => isTopLevel(p))
+  const databases = allDatabases.filter(d => isTopLevel(d))
 
   return { pages, databases }
 }
