@@ -907,12 +907,7 @@ const App: React.FC = () => {
   }
 
   // ─── Preview Content Render Helper ───
-  const previewProps = useMemo(() => {
-    if (!loadedPreviewData) return []
-    return getPreviewProps(loadedPreviewData)
-  }, [loadedPreviewData])
-
-  const getPreviewProps = (data: any) => {
+  function getPreviewProps(data: any) {
     if (data.isStatic) {
       return data.props || []
     }
@@ -942,6 +937,11 @@ const App: React.FC = () => {
     }
     return props
   }
+
+  const previewProps = useMemo(() => {
+    if (!loadedPreviewData) return []
+    return getPreviewProps(loadedPreviewData)
+  }, [loadedPreviewData])
 
   const canGoBack = historyIndex > 0
   const canGoForward = historyIndex < navigationHistory.length - 1
