@@ -134,7 +134,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { accessToken, lastSyncTime } = req.body
+    const { accessToken, lastSyncTime, pageId, databaseId } = req.body
 
     if (!accessToken) {
       return res.status(400).json({ error: 'Missing access token' })
@@ -142,38 +142,34 @@ export default async function handler(req, res) {
 
     const notion = getClient(accessToken)
 
-    // Fetch workspace
+    // Case 1: On-demand page blocks fetch
+    if (pageId) {
+      try {
+        const blocks = await fetchBlockChildren(notion, pageId)
+        return res.status(200).json({ blocks })
+      } catch (error) {
+        console.error(`Error fetching on-demand blocks for page ${pageId}:`, error)
+        return res.status(500).json({ error: 'Failed to fetch page blocks' })
+      }
+    }
+
+    // Case 2: On-demand database query fetch
+    if (databaseId) {
+      try {
+        const entries = await fetchDatabaseEntries(notion, databaseId)
+        return res.status(200).json({ entries })
+      } catch (error) {
+        console.error(`Error querying on-demand entries for database ${databaseId}:`, error)
+        return res.status(500).json({ error: 'Failed to query database entries' })
+      }
+    }
+
+    // Case 3: Workspace Skeleton Sync (instant!)
     const { pages, databases } = await fetchWorkspace(notion)
-
-    // Fetch blocks for each page
-    const pageBlocks = {}
-    for (const page of pages) {
-      try {
-        const blocks = await fetchBlockChildren(notion, page.id)
-        pageBlocks[page.id] = blocks
-      } catch (error) {
-        console.error(`Error fetching blocks for page ${page.id}:`, error)
-        pageBlocks[page.id] = []
-      }
-    }
-
-    // Fetch entries for each database
-    const databaseEntries = {}
-    for (const db of databases) {
-      try {
-        const entries = await fetchDatabaseEntries(notion, db.id)
-        databaseEntries[db.id] = entries
-      } catch (error) {
-        console.error(`Error fetching entries for database ${db.id}:`, error)
-        databaseEntries[db.id] = []
-      }
-    }
 
     return res.status(200).json({
       pages,
       databases,
-      pageBlocks,
-      databaseEntries,
       syncTime: new Date().toISOString()
     })
   } catch (error) {

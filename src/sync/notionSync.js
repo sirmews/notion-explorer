@@ -58,14 +58,14 @@ export async function syncWorkspace(onProgress = null) {
 
     // Transform and save pages
     for (const page of data.pages) {
-      await savePage(page, data.pageBlocks[page.id] || [])
+      await savePage(page, [])
       syncProgress++
       if (onProgress) onProgress(syncProgress, syncTotal)
     }
 
     // Transform and save databases
     for (const db of data.databases) {
-      await saveDatabase(db, data.databaseEntries[db.id] || [])
+      await saveDatabase(db, [])
       syncProgress++
       if (onProgress) onProgress(syncProgress, syncTotal)
     }
@@ -168,12 +168,76 @@ export async function loadFileSystem() {
 
 // Load page data
 export async function loadPage(pageId) {
-  return readFile(`/pages/${pageId}.json`)
+  const pageData = await readFile(`/pages/${pageId}.json`)
+  if (!pageData) return null
+
+  // If page blocks list is empty and it's NOT a demo page, fetch blocks on-demand!
+  const isDemo = pageId.startsWith('demo-')
+  if ((!pageData.blocks || pageData.blocks.length === 0) && !isDemo) {
+    console.log(`Lazy loading blocks on-demand for page: ${pageId}`)
+    const tokens = getStoredTokens()
+    if (tokens?.accessToken) {
+      try {
+        const response = await fetch('/api/notion/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accessToken: tokens.accessToken,
+            pageId: pageId
+          })
+        })
+        if (response.ok) {
+          const result = await response.json()
+          if (result.blocks) {
+            pageData.blocks = result.blocks
+            // Cache back to local storage
+            await writeFile(`/pages/${pageId}.json`, pageData)
+          }
+        }
+      } catch (err) {
+        console.error(`On-demand blocks load failed for page ${pageId}:`, err)
+      }
+    }
+  }
+
+  return pageData
 }
 
 // Load database data
 export async function loadDatabase(databaseId) {
-  return readFile(`/databases/${databaseId}.json`)
+  const dbData = await readFile(`/databases/${databaseId}.json`)
+  if (!dbData) return null
+
+  // If database entries is empty and it's NOT a demo db, fetch entries on-demand!
+  const isDemo = databaseId.startsWith('demo-')
+  if ((!dbData.entries || dbData.entries.length === 0) && !isDemo) {
+    console.log(`Lazy querying entries on-demand for database: ${databaseId}`)
+    const tokens = getStoredTokens()
+    if (tokens?.accessToken) {
+      try {
+        const response = await fetch('/api/notion/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accessToken: tokens.accessToken,
+            databaseId: databaseId
+          })
+        })
+        if (response.ok) {
+          const result = await response.json()
+          if (result.entries) {
+            dbData.entries = result.entries
+            // Cache back to local storage
+            await writeFile(`/databases/${databaseId}.json`, dbData)
+          }
+        }
+      } catch (err) {
+        console.error(`On-demand entries load failed for database ${databaseId}:`, err)
+      }
+    }
+  }
+
+  return dbData
 }
 
 // Check if workspace is synced
