@@ -100,7 +100,7 @@ function transformPropertyValue(prop) {
 
   switch (prop.type) {
     case PropertyTypes.TITLE:
-      value.text = prop.title?.map(t => t.plain_text).join('') || ''
+      value.text = Array.isArray(prop.title) ? prop.title.map(t => t.plain_text).join('') : ''
       value.richText = prop.title || []
       break
     case PropertyTypes.RICH_TEXT:

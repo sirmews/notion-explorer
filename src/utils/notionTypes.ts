@@ -114,14 +114,15 @@ export function getPageIcon(page) {
 }
 
 // Get page title from properties
-export function getPageTitle(page) {
-  if (!page.properties) return 'Untitled'
-
-  // Find the title property
-  for (const [key, prop] of Object.entries(page.properties)) {
-    const p = prop as any
-    if (p.type === 'title') {
-      return p.title?.map(t => t.plain_text).join('') || 'Untitled'
+export function getPageTitle(item: any): string {
+  if (item.object === 'database' && Array.isArray(item.title)) {
+    return item.title.map((t: any) => t.plain_text).join('') || 'Untitled'
+  }
+  if (item.properties) {
+    for (const prop of Object.values(item.properties) as any[]) {
+      if (prop.type === 'title' && Array.isArray(prop.title)) {
+        return prop.title.map((t: any) => t.plain_text).join('') || 'Untitled'
+      }
     }
   }
   return 'Untitled'
