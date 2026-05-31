@@ -1151,5 +1151,39 @@ if (resizeRight && previewPanel) {
   });
 }
 
+// Layout View Toggle Logic (Phase 4)
+const listViewBtn = document.querySelector('[title="List View"]');
+const gridViewBtn = document.querySelector('[title="Grid View"]');
+
+function applyLayout(layout) {
+  if (layout === 'grid') {
+    if (gridViewBtn) gridViewBtn.classList.add('active');
+    if (listViewBtn) listViewBtn.classList.remove('active');
+    if (fileList) fileList.classList.add('grid-view');
+  } else {
+    if (listViewBtn) listViewBtn.classList.add('active');
+    if (gridViewBtn) gridViewBtn.classList.remove('active');
+    if (fileList) fileList.classList.remove('grid-view');
+  }
+}
+
+if (gridViewBtn) {
+  gridViewBtn.addEventListener('click', () => {
+    applyLayout('grid');
+    localStorage.setItem('layout', 'grid');
+  });
+}
+
+if (listViewBtn) {
+  listViewBtn.addEventListener('click', () => {
+    applyLayout('list');
+    localStorage.setItem('layout', 'list');
+  });
+}
+
+// Initial layout apply on startup
+const savedLayout = localStorage.getItem('layout') || 'list';
+applyLayout(savedLayout);
+
 // Initialize and load local data on load
 await loadLocalData()
