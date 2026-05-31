@@ -103,6 +103,8 @@ updateNotionButton()
 
 // File system data
 let fileSystemData = null
+let allFileData = []
+let searchInput = null
 
 // Load data from OPFS
 async function loadLocalData() {
@@ -148,14 +150,10 @@ function renderFromFileSystem(fs) {
     }))
   ]
 
-  // Update fileData and re-render
-  fileData.length = 0
-  fileData.push(...allItems)
-  selectedIndex = 0
-  renderList()
-  if (fileData.length > 0) {
-    renderPreview(fileData[0])
-  }
+  // Update master copy and render
+  allFileData = [...allItems]
+  const query = searchInput ? searchInput.value : ''
+  filterAndRender(query)
 }
 
 // Fallback sample data
@@ -259,6 +257,44 @@ const fileList = document.getElementById('file-list');
 const preview = document.getElementById('preview');
 let selectedIndex = -1;
 
+allFileData = [...fileData];
+searchInput = document.querySelector('.search-box input');
+
+function filterAndRender(query = '') {
+  const normalizedQuery = query.toLowerCase().trim();
+  
+  let filtered;
+  if (!normalizedQuery) {
+    filtered = [...allFileData];
+  } else {
+    filtered = allFileData.filter(item => {
+      const matchesName = item.name ? item.name.toLowerCase().includes(normalizedQuery) : false;
+      const matchesKind = item.kind ? item.kind.toLowerCase().includes(normalizedQuery) : false;
+      const matchesTags = item.tags ? item.tags.some(t => t && t.text && t.text.toLowerCase().includes(normalizedQuery)) : false;
+      return matchesName || matchesKind || matchesTags;
+    });
+  }
+  
+  // Update active fileData array in place
+  fileData.length = 0;
+  fileData.push(...filtered);
+  
+  if (fileData.length > 0) {
+    selectedIndex = 0;
+  } else {
+    selectedIndex = -1;
+  }
+  
+  renderList();
+  renderPreview(fileData[selectedIndex]);
+}
+
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    filterAndRender(e.target.value);
+  });
+}
+
 function formatDate(d) {
   if (!d) return '—';
   const date = new Date(d);
@@ -268,6 +304,16 @@ function formatDate(d) {
 }
 
 function renderList() {
+  if (fileData.length === 0) {
+    fileList.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <div class="text">No results found</div>
+      </div>
+    `;
+    return;
+  }
+
   fileList.innerHTML = fileData.map((f, i) => `
     <div class="file-row${i === selectedIndex ? ' selected' : ''}" data-index="${i}">
       <div class="file-cell name-cell">
@@ -291,7 +337,7 @@ function renderList() {
       selectedIndex = parseInt(row.dataset.index);
       const item = fileData[selectedIndex];
       // Open page in new tab
-      if (item.id) {
+      if (item && item.id) {
         window.open(`/page.html?id=${item.id}`, '_blank');
       }
     });
@@ -299,7 +345,36 @@ function renderList() {
 }
 
 async function renderPreview(item) {
-  if (!item) return;
+  if (!item) {
+    const coverEl = preview.querySelector('.preview-cover');
+    if (coverEl) {
+      coverEl.style.backgroundImage = '';
+      coverEl.className = 'preview-cover img-1';
+    }
+    const iconEl = preview.querySelector('.preview-icon');
+    if (iconEl) iconEl.textContent = '📄';
+    const titleEl = preview.querySelector('.preview-title');
+    if (titleEl) titleEl.textContent = 'No Selection';
+    const subtitleEl = preview.querySelector('.preview-subtitle');
+    if (subtitleEl) subtitleEl.textContent = '';
+    const propsEl = preview.querySelector('.preview-props');
+    if (propsEl) propsEl.innerHTML = '';
+    const contentEl = preview.querySelector('.preview-content');
+    if (contentEl) {
+      contentEl.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <div class="text">No results matching search</div>
+        </div>
+      `;
+    }
+    const actionBtn = preview.querySelector('.preview-action');
+    if (actionBtn) actionBtn.style.display = 'none';
+    return;
+  }
+
+  const actionBtn = preview.querySelector('.preview-action');
+  if (actionBtn) actionBtn.style.display = '';
 
   // Set cover background if item has an external or file url cover, otherwise fallback to class
   const coverEl = preview.querySelector('.preview-cover');
@@ -440,6 +515,7 @@ document.addEventListener('click', () => contextMenu.classList.remove('show'));
 
 // Keyboard navigation
 document.addEventListener('keydown', e => {
+  if (fileData.length === 0) return;
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     selectedIndex = Math.min(selectedIndex + 1, fileData.length - 1);
@@ -471,6 +547,76 @@ document.querySelectorAll('.sidebar-item .chevron').forEach(chevron => {
     }
   });
 });
+
+// Draggable Sidebars / Resizers
+const resizeLeft = document.getElementById('resize-left');
+const resizeRight = document.getElementById('resize-right');
+const sidebar = document.querySelector('.sidebar');
+const previewPanel = document.querySelector('.preview');
+
+if (resizeLeft && sidebar) {
+  resizeLeft.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startWidth = sidebar.getBoundingClientRect().width;
+    const startX = e.clientX;
+    
+    // Add visual feedback and block text selection during drag
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    
+    const onMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      let newWidth = startWidth + deltaX;
+      if (newWidth < 150) newWidth = 150;
+      if (newWidth > 450) newWidth = 450;
+      sidebar.style.width = `${newWidth}px`;
+    };
+    
+    const onMouseUp = () => {
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      document.body.style.cursor = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+if (resizeRight && previewPanel) {
+  resizeRight.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startWidth = previewPanel.getBoundingClientRect().width;
+    const startX = e.clientX;
+    
+    // Add visual feedback and block text selection during drag
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    
+    const onMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      let newWidth = startWidth - deltaX;
+      if (newWidth < 200) newWidth = 200;
+      if (newWidth > 500) newWidth = 500;
+      previewPanel.style.width = `${newWidth}px`;
+    };
+    
+    const onMouseUp = () => {
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      document.body.style.cursor = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
 
 // Initialize and load local data on load
 await loadLocalData()
