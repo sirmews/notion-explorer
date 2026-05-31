@@ -1,10 +1,10 @@
 import './style.css'
-import { isConnected, redirectToNotion, handleCallback, exchangeCode } from './auth/oauth'
+import { isConnected, redirectToNotion, handleCallback, exchangeCode, clearTokens, getStoredTokens } from './auth/oauth'
 import { syncWorkspace, loadFileSystem, loadPage, loadDatabase, isSynced, getSyncStatus } from './sync/notionSync'
 import { renderBlocks } from './components/blockRenderer'
 import { renderDatabase } from './renderers/database'
 import { loadDemoWorkspace } from './sync/demoData'
-import { getMetadata } from './sync/opfs'
+import { getMetadata, clearAll } from './sync/opfs'
 
 // Handle OAuth callback
 const callbackResult = handleCallback()
@@ -1190,6 +1190,105 @@ if (listViewBtn) {
 // Initial layout apply on startup
 const savedLayout = localStorage.getItem('layout') || 'list';
 applyLayout(savedLayout);
+
+// ── Settings Modal Integration ──
+const settingsBtn = document.querySelector('.sidebar-item[data-page="settings"]');
+const settingsModal = document.getElementById('settings-modal');
+const closeSettings = document.getElementById('close-settings');
+const notionActionBtn = document.getElementById('notion-action-btn');
+const clearCacheBtn = document.getElementById('clear-cache-btn');
+const loadDemoBtn = document.getElementById('load-demo-btn');
+
+const updateSettingsUI = () => {
+  const statusEl = document.getElementById('notion-status');
+  const detailsEl = document.getElementById('notion-details');
+  const actionBtn = notionActionBtn as HTMLButtonElement;
+
+  if (isConnected()) {
+    const tokens = getStoredTokens();
+    statusEl?.classList.remove('disconnected');
+    statusEl?.classList.add('connected');
+    if (statusEl) {
+      const text = statusEl.querySelector('.status-text');
+      if (text) text.textContent = 'Connected';
+    }
+    if (detailsEl) {
+      detailsEl.textContent = `Connected to workspace: "${tokens?.workspaceName || 'Your Workspace'}" (ID: ${tokens?.workspaceId || 'Unknown'})`;
+    }
+    if (actionBtn) {
+      actionBtn.textContent = 'Disconnect';
+      actionBtn.className = 'settings-btn dest-btn';
+    }
+  } else {
+    statusEl?.classList.remove('connected');
+    statusEl?.classList.add('disconnected');
+    if (statusEl) {
+      const text = statusEl.querySelector('.status-text');
+      if (text) text.textContent = 'Disconnected';
+    }
+    if (detailsEl) {
+      detailsEl.textContent = 'Connect your Notion workspace to sync and view your pages live.';
+    }
+    if (actionBtn) {
+      actionBtn.textContent = 'Connect';
+      actionBtn.className = 'settings-btn';
+    }
+  }
+};
+
+if (settingsBtn && settingsModal) {
+  settingsBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateSettingsUI();
+    settingsModal.style.display = 'flex';
+  });
+}
+
+if (closeSettings && settingsModal) {
+  closeSettings.addEventListener('click', () => {
+    settingsModal.style.display = 'none';
+  });
+}
+
+if (settingsModal) {
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+      settingsModal.style.display = 'none';
+    }
+  });
+}
+
+if (notionActionBtn) {
+  notionActionBtn.addEventListener('click', async () => {
+    if (isConnected()) {
+      clearTokens();
+      await clearAll();
+      window.location.href = '/';
+    } else {
+      redirectToNotion();
+    }
+  });
+}
+
+if (clearCacheBtn) {
+  clearCacheBtn.addEventListener('click', async () => {
+    if (confirm("Are you sure you want to clear the local IndexedDB cache? This will reset all synced Notion files.")) {
+      await clearAll();
+      resetHistory();
+      window.location.href = '/';
+    }
+  });
+}
+
+if (loadDemoBtn) {
+  loadDemoBtn.addEventListener('click', async () => {
+    if (confirm("Reset local storage and load the offline Demo Workspace data?")) {
+      await loadDemoWorkspace();
+      window.location.href = '/';
+    }
+  });
+}
 
 // Initialize and load local data on load
 await loadLocalData()

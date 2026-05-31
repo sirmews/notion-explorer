@@ -181,6 +181,40 @@
   <div class="context-menu-item" style="color:#dc2626">Move to Trash <span class="shortcut">⌫</span></div>
 </div>
 
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal" style="display: none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Settings</span>
+      <button class="modal-close" id="close-settings">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Section: Notion Connection -->
+      <div class="settings-section">
+        <h3>Notion Connection</h3>
+        <div class="connection-card">
+          <div class="connection-status" id="notion-status">
+            <span class="status-dot"></span>
+            <span class="status-text">Disconnected</span>
+          </div>
+          <p class="settings-desc" id="notion-details">Connect your Notion workspace to sync and view your pages live.</p>
+          <button class="settings-btn" id="notion-action-btn">Connect</button>
+        </div>
+      </div>
+
+      <!-- Section: Cache Management -->
+      <div class="settings-section">
+        <h3>Local Cache</h3>
+        <p class="settings-desc">Your Notion data is cached locally in IndexedDB for offline access and rapid navigation.</p>
+        <div class="settings-actions">
+          <button class="settings-btn dest-btn" id="clear-cache-btn">Clear Local Cache</button>
+          <button class="settings-btn" id="load-demo-btn">Reset to Demo Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
