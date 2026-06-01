@@ -13,11 +13,8 @@
   "license": "ISC",
   "dependencies": {
     "@notionhq/client": "^5.22.0",
-    "notion-client": "^7.10.0",
-    "notion-types": "^7.10.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-notion-x": "^7.10.0"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { loadPage, loadFileSystem } from './sync/notionSync'
-import { NotionRenderer } from 'react-notion-x'
-import 'react-notion-x/styles.css'
+import { PageContent } from './components/BlockRenderer'
 
 function getPageId() {
   const params = new URLSearchParams(window.location.search)
@@ -79,13 +78,7 @@ const PageViewerApp: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '20px 0' }}>
-      {page.recordMap ? (
-        <NotionRenderer recordMap={page.recordMap} fullPage={true} />
-      ) : (
-        <div className="loading">No content cached for this page.</div>
-      )}
-    </div>
+    <PageContent page={page} blocks={page.blocks || []} />
   )
 }
 

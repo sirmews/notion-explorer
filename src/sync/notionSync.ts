@@ -167,78 +167,88 @@ export async function loadFileSystem() {
   return readFile('/filesystem.json')
 }
 
-async function registerChildNodesFromRecordMap(pageId: string, recordMap: any) {
-  if (!recordMap || !recordMap.block) return false
+async function registerChildNodes(parentId: string, blocks: any[]) {
+  if (!blocks || blocks.length === 0) return false
 
   let fsModified = false
   const fs: any = await readFile('/filesystem.json') || { pages: [], databases: [] }
 
-  const blocks = Object.values(recordMap.block).map((b: any) => b.value).filter(Boolean)
-
-  for (const block of blocks) {
-    if (block.id === pageId) continue
-
-    if (block.type === 'page' && block.parent_id === pageId) {
-      const childId = block.id
-      const childTitle = block.properties?.title?.[0]?.[0] || 'Untitled'
-      
-      const exists = fs.pages.some((p: any) => p.id === childId)
-      if (!exists) {
-        fs.pages.push({
-          id: childId,
-          title: childTitle,
-          icon: block.format?.page_icon || '📄',
-          parent: { type: 'page_id', page_id: pageId },
-          hasChildren: block.content && block.content.length > 0
-        })
+  const scanBlocks = async (blockList: any[]) => {
+    for (const block of blockList) {
+      if (block.type === 'child_page' && block.child_page) {
+        const childId = block.id
+        const childTitle = block.child_page.title || 'Untitled'
         
-        // Write placeholder page JSON
-        await writeFile(`/pages/${childId}.json`, {
-          id: childId,
-          type: 'page',
-          title: childTitle,
-          icon: block.format?.page_icon || '📄',
-          cover: block.format?.page_cover || null,
-          properties: {},
-          parent: { type: 'page_id', page_id: pageId },
-          createdTime: block.created_time ? new Date(block.created_time).toISOString() : new Date().toISOString(),
-          lastEditedTime: block.last_edited_time ? new Date(block.last_edited_time).toISOString() : new Date().toISOString(),
-          recordMap: null
-        })
-        fsModified = true
+        // Add if not already present in filesystem.json
+        const exists = fs.pages.some((p: any) => p.id === childId)
+        if (!exists) {
+          fs.pages.push({
+            id: childId,
+            title: childTitle,
+            icon: '📄',
+            parent: { type: 'page_id', page_id: parentId },
+            hasChildren: block.has_children
+          })
+          
+          // Write placeholder page JSON
+          await writeFile(`/pages/${childId}.json`, {
+            id: childId,
+            type: 'page',
+            title: childTitle,
+            icon: '📄',
+            cover: null,
+            properties: {},
+            parent: { type: 'page_id', page_id: parentId },
+            createdTime: new Date().toISOString(),
+            lastEditedTime: new Date().toISOString(),
+            blocks: [],
+            url: `https://notion.so/${childId.replace(/-/g, '')}`
+          })
+          
+          fsModified = true
+        }
+      } else if (block.type === 'child_database' && block.child_database) {
+        const childId = block.id
+        const childTitle = block.child_database.title || 'Untitled'
+        
+        // Add if not already present in filesystem.json
+        const exists = fs.databases.some((d: any) => d.id === childId)
+        if (!exists) {
+          fs.databases.push({
+            id: childId,
+            title: childTitle,
+            icon: '📋',
+            parent: { type: 'page_id', page_id: parentId }
+          })
+          
+          // Write placeholder database JSON
+          await writeFile(`/databases/${childId}.json`, {
+            id: childId,
+            type: 'database',
+            title: childTitle,
+            icon: '📋',
+            cover: null,
+            description: [],
+            properties: {},
+            parent: { type: 'page_id', page_id: parentId },
+            createdTime: new Date().toISOString(),
+            lastEditedTime: new Date().toISOString(),
+            entries: [],
+            url: `https://notion.so/${childId.replace(/-/g, '')}`
+          })
+          
+          fsModified = true
+        }
       }
-    } else if ((block.type === 'collection_view' || block.type === 'collection_view_page') && block.parent_id === pageId) {
-      const childId = block.id
-      const collection = recordMap.collection?.[block.collection_id]?.value
-      const childTitle = collection?.name?.[0]?.[0] || 'Untitled Database'
-      
-      const exists = fs.databases.some((d: any) => d.id === childId)
-      if (!exists) {
-        fs.databases.push({
-          id: childId,
-          title: childTitle,
-          icon: collection?.icon || '📋',
-          parent: { type: 'page_id', page_id: pageId }
-        })
-        
-        // Write placeholder database JSON
-        await writeFile(`/databases/${childId}.json`, {
-          id: childId,
-          type: 'database',
-          title: childTitle,
-          icon: collection?.icon || '📋',
-          cover: collection?.cover || null,
-          description: collection?.description || [],
-          properties: {},
-          parent: { type: 'page_id', page_id: pageId },
-          createdTime: block.created_time ? new Date(block.created_time).toISOString() : new Date().toISOString(),
-          lastEditedTime: block.last_edited_time ? new Date(block.last_edited_time).toISOString() : new Date().toISOString(),
-          entries: []
-        })
-        fsModified = true
+
+      // Recurse if the block has loaded children (e.g. from sync)
+      if (block.children) {
+        await scanBlocks(block.children)
       }
     }
   }
+
+  await scanBlocks(blocks)
 
   if (fsModified) {
     await writeFile('/filesystem.json', fs)
@@ -253,9 +263,9 @@ export async function loadPage(pageId) {
   const pageData = await readFile(`/pages/${pageId}.json`)
   if (!pageData) return null
 
-  // If page recordMap is empty and it's NOT a demo page, fetch recordMap on-demand!
+  // If page blocks list is empty and it's NOT a demo page, fetch blocks on-demand!
   const isDemo = pageId.startsWith('demo-')
-  if ((!pageData.recordMap || Object.keys(pageData.recordMap).length === 0) && !isDemo) {
+  if ((!pageData.blocks || pageData.blocks.length === 0) && !isDemo) {
     console.log(`Lazy loading blocks on-demand for page: ${pageId}`)
     const tokens = getStoredTokens()
     if (tokens?.accessToken) {
@@ -270,20 +280,22 @@ export async function loadPage(pageId) {
         })
         if (response.ok) {
           const result = await response.json()
-          if (result.recordMap) {
-            pageData.recordMap = result.recordMap
+          if (result.blocks) {
+            // Transform raw blocks to local cached layout properties (richText, plainText, etc.)
+            const transformed = transformBlocks(result.blocks)
+            pageData.blocks = transformed
             // Cache back to local storage
             await writeFile(`/pages/${pageId}.json`, pageData)
 
             // Register any dynamic child pages/databases
-            const fsModified = await registerChildNodesFromRecordMap(pageId, result.recordMap)
+            const fsModified = await registerChildNodes(pageId, transformed)
             if (fsModified) {
               window.dispatchEvent(new CustomEvent('filesystem-updated', { detail: { pageId } }))
             }
           }
         }
       } catch (err) {
-        console.error(`On-demand recordMap load failed for page ${pageId}:`, err)
+        console.error(`On-demand blocks load failed for page ${pageId}:`, err)
       }
     }
   }

@@ -566,23 +566,3 @@ body{display:flex;align-items:center;justify-content:center;padding:20px}
   flex-direction: column;
   gap: 6px;
 }
-
-/* ── Unsupported Block Placeholders ── */
-.unsupported-block {
-  padding: 6px 12px;
-  background: rgba(0, 0, 0, 0.02);
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .unsupported-block {
-    background: rgba(255, 255, 255, 0.02);
-  }
-}

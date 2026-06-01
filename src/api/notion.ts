@@ -1,7 +1,7 @@
 import { getStoredTokens, clearTokens } from '../auth/oauth'
 
 const NOTION_API_BASE = 'https://api.notion.com/v1'
-const NOTION_VERSION = '2022-11-12'
+const NOTION_VERSION = '2022-06-28'
 
 async function notionFetch(endpoint, options: any = {}) {
   const tokens = getStoredTokens()
