@@ -55,40 +55,55 @@ export const RichText: React.FC<{ richText: any[] }> = ({ richText }) => {
 }
 
 // Render paragraph
-export const ParagraphBlock: React.FC<{ block: any }> = ({ block }) => {
+export const ParagraphBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   if (!block.richText || block.richText.length === 0) {
     return <p><br /></p>
   }
   return (
-    <p>
-      <RichText richText={block.richText} />
-    </p>
+    <div className="paragraph-block">
+      <p>
+        <RichText richText={block.richText} />
+      </p>
+      {children && <div className="nested-blocks">{children}</div>}
+    </div>
   )
 }
 
 // Render heading
-export const HeadingBlock: React.FC<{ block: any }> = ({ block }) => {
+export const HeadingBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   const level = block.type === BlockTypes.HEADING_1 ? 1 :
                 block.type === BlockTypes.HEADING_2 ? 2 : 3
-  if (level === 1) {
+  
+  const isToggle = !!block.isToggleable || 
+                   block.heading_1?.is_toggleable || 
+                   block.heading_2?.is_toggleable || 
+                   block.heading_3?.is_toggleable;
+
+  const renderTitle = () => {
+    if (level === 1) {
+      return <h1><RichText richText={block.richText} /></h1>
+    } else if (level === 2) {
+      return <h2><RichText richText={block.richText} /></h2>
+    } else {
+      return <h3><RichText richText={block.richText} /></h3>
+    }
+  }
+
+  if (isToggle) {
     return (
-      <h1>
-        <RichText richText={block.richText} />
-      </h1>
-    )
-  } else if (level === 2) {
-    return (
-      <h2>
-        <RichText richText={block.richText} />
-      </h2>
-    )
-  } else {
-    return (
-      <h3>
-        <RichText richText={block.richText} />
-      </h3>
+      <details className={`toggle-heading level-${level}`}>
+        <summary>{renderTitle()}</summary>
+        {children && <div className="nested-blocks">{children}</div>}
+      </details>
     )
   }
+
+  return (
+    <div className={`heading-block level-${level}`}>
+      {renderTitle()}
+      {children && <div className="nested-blocks">{children}</div>}
+    </div>
+  )
 }
 
 // Render bulleted list item
@@ -112,14 +127,17 @@ export const NumberedListBlock: React.FC<{ block: any; children?: React.ReactNod
 }
 
 // Render to-do item
-export const ToDoBlock: React.FC<{ block: any }> = ({ block }) => {
+export const ToDoBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   const checked = !!block.checked
   return (
     <div className="todo-item">
-      <input type="checkbox" checked={checked} readOnly disabled />
-      <span className={checked ? 'done' : ''}>
-        <RichText richText={block.richText} />
-      </span>
+      <div className="todo-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <input type="checkbox" checked={checked} readOnly disabled />
+        <span className={checked ? 'done' : ''}>
+          <RichText richText={block.richText} />
+        </span>
+      </div>
+      {children && <div className="nested-blocks">{children}</div>}
     </div>
   )
 }
@@ -139,10 +157,11 @@ export const ToggleBlock: React.FC<{ block: any; children?: React.ReactNode }> =
 }
 
 // Render quote block
-export const QuoteBlock: React.FC<{ block: any }> = ({ block }) => {
+export const QuoteBlock: React.FC<{ block: any; children?: React.ReactNode }> = ({ block, children }) => {
   return (
     <blockquote>
       <RichText richText={block.richText} />
+      {children && <div className="nested-blocks">{children}</div>}
     </blockquote>
   )
 }
