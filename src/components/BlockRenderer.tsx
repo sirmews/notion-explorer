@@ -118,6 +118,12 @@ function renderBlockContent(block: any): React.ReactNode {
           </a>
         </div>
       )
+    case 'unsupported':
+      return (
+        <div className="unsupported-block">
+          <span className="icon">⚠️</span> Unsupported Block Type
+        </div>
+      )
     default:
       console.warn(`No renderer for block type: ${block.type}`)
       return (

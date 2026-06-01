@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { BlockRenderer } from './BlockRenderer'
+import { NotionRenderer } from 'react-notion-x'
 import { DatabaseView } from '../renderers/DatabaseView'
 
 interface PreviewPanelProps {
@@ -135,7 +135,11 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
             {loadedPreviewData.isStatic ? (
               <div dangerouslySetInnerHTML={{ __html: loadedPreviewData.content }}></div>
             ) : loadedPreviewData.type === 'page' ? (
-              <BlockRenderer blocks={loadedPreviewData.blocks} />
+              loadedPreviewData.recordMap ? (
+                <NotionRenderer recordMap={loadedPreviewData.recordMap} fullPage={false} />
+              ) : (
+                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>No content</div>
+              )
             ) : (
               <DatabaseView database={loadedPreviewData.schema} entries={loadedPreviewData.entries} />
             )}

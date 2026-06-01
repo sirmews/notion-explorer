@@ -1,11 +1,12 @@
 import { Client } from '@notionhq/client'
+import { NotionAPI } from 'notion-client'
 import type { IncomingMessage, ServerResponse } from 'http'
 
 // Initialize Notion client
 function getClient(accessToken: string) {
   return new Client({
     auth: accessToken,
-    notionVersion: '2022-06-28'
+    notionVersion: '2022-11-12'
   })
 }
 
@@ -166,14 +167,17 @@ export default async function handler(req: IncomingMessage & { body?: any }, res
 
     const notion = getClient(accessToken)
 
-    // Case 1: On-demand page blocks fetch
+    // Case 1: On-demand page recordMap fetch
     if (pageId) {
       try {
-        const blocks = await fetchBlockChildren(notion, pageId)
-        return res.status(200).json({ blocks })
+        const notionClient = new NotionAPI({
+          authToken: accessToken
+        })
+        const recordMap = await notionClient.getPage(pageId)
+        return res.status(200).json({ recordMap })
       } catch (error) {
-        console.error(`Error fetching on-demand blocks for page ${pageId}:`, error)
-        return res.status(500).json({ error: 'Failed to fetch page blocks' })
+        console.error(`Error fetching on-demand recordMap for page ${pageId}:`, error)
+        return res.status(500).json({ error: 'Failed to fetch page recordMap' })
       }
     }
 
