@@ -1,5 +1,6 @@
 import { readFile, writeFile, getMetadata, setMetadata } from './opfs'
 import { getStoredTokens } from '../auth/oauth'
+import { transformBlocks, transformDatabaseEntry } from './transform'
 
 // Sync status
 let syncInProgress = false
@@ -280,12 +281,14 @@ export async function loadPage(pageId) {
         if (response.ok) {
           const result = await response.json()
           if (result.blocks) {
-            pageData.blocks = result.blocks
+            // Transform raw blocks to local cached layout properties (richText, plainText, etc.)
+            const transformed = transformBlocks(result.blocks)
+            pageData.blocks = transformed
             // Cache back to local storage
             await writeFile(`/pages/${pageId}.json`, pageData)
 
             // Register any dynamic child pages/databases
-            const fsModified = await registerChildNodes(pageId, result.blocks)
+            const fsModified = await registerChildNodes(pageId, transformed)
             if (fsModified) {
               window.dispatchEvent(new CustomEvent('filesystem-updated', { detail: { pageId } }))
             }
@@ -323,7 +326,9 @@ export async function loadDatabase(databaseId) {
         if (response.ok) {
           const result = await response.json()
           if (result.entries) {
-            dbData.entries = result.entries
+            // Transform raw entries to local cached schemas
+            const transformed = result.entries.map((entry: any) => transformDatabaseEntry(entry, dbData.properties))
+            dbData.entries = transformed
             // Cache back to local storage
             await writeFile(`/databases/${databaseId}.json`, dbData)
           }
