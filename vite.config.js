@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import syncHandler from './api/notion/sync.js'
+import syncHandler from './api/notion/sync.ts'
 
 // Load .env manually for server-side
 function loadEnv() {

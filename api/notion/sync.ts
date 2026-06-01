@@ -1,7 +1,8 @@
 import { Client } from '@notionhq/client'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 // Initialize Notion client
-function getClient(accessToken) {
+function getClient(accessToken: string) {
   return new Client({
     auth: accessToken,
     notionVersion: '2022-06-28'
@@ -9,16 +10,16 @@ function getClient(accessToken) {
 }
 
 // Fetch all pages and databases
-async function fetchWorkspace(notion) {
-  const allPages = []
-  const allDatabases = []
+async function fetchWorkspace(notion: Client) {
+  const allPages: any[] = []
+  const allDatabases: any[] = []
 
   // Search for all pages
-  let cursor = undefined
+  let cursor: string | undefined = undefined
   let hasMore = true
 
   while (hasMore) {
-    const response = await notion.search({
+    const response: any = await notion.search({
       start_cursor: cursor,
       page_size: 100,
       filter: {
@@ -34,7 +35,7 @@ async function fetchWorkspace(notion) {
     }
 
     hasMore = response.has_more
-    cursor = response.next_cursor
+    cursor = response.next_cursor || undefined
   }
 
   // Search for databases
@@ -42,14 +43,14 @@ async function fetchWorkspace(notion) {
   hasMore = true
 
   while (hasMore) {
-    const response = await notion.search({
+    const response: any = await notion.search({
       start_cursor: cursor,
       page_size: 100,
       filter: {
         value: 'database',
         property: 'object'
       }
-    })
+    } as any)
 
     for (const item of response.results) {
       if (item.object === 'database') {
@@ -58,7 +59,7 @@ async function fetchWorkspace(notion) {
     }
 
     hasMore = response.has_more
-    cursor = response.next_cursor
+    cursor = response.next_cursor || undefined
   }
 
   const allIds = new Set([
@@ -67,7 +68,7 @@ async function fetchWorkspace(notion) {
   ])
 
   // Filter root/top-level items (parent is workspace/teamspace OR parent is not in our shared list)
-  const isTopLevel = (item) => {
+  const isTopLevel = (item: any) => {
     if (!item.parent || item.parent.type === 'workspace' || item.parent.type === 'teamspace') {
       return true
     }
@@ -89,16 +90,16 @@ async function fetchWorkspace(notion) {
 }
 
 // Fetch block children recursively
-async function fetchBlockChildren(notion, blockId, depth = 0) {
+async function fetchBlockChildren(notion: Client, blockId: string, depth = 0): Promise<any[]> {
   if (depth > 5) return [] // Limit recursion depth
 
-  const blocks = []
-  let cursor = undefined
+  const blocks: any[] = []
+  let cursor: string | undefined = undefined
   let hasMore = true
 
   while (hasMore) {
     try {
-      const response = await notion.blocks.children.list({
+      const response: any = await notion.blocks.children.list({
         block_id: blockId,
         start_cursor: cursor,
         page_size: 100
@@ -114,7 +115,7 @@ async function fetchBlockChildren(notion, blockId, depth = 0) {
       }
 
       hasMore = response.has_more
-      cursor = response.next_cursor
+      cursor = response.next_cursor || undefined
     } catch (error) {
       console.error(`Error fetching children for ${blockId}:`, error)
       break
@@ -125,14 +126,14 @@ async function fetchBlockChildren(notion, blockId, depth = 0) {
 }
 
 // Fetch database entries
-async function fetchDatabaseEntries(notion, databaseId) {
-  const entries = []
-  let cursor = undefined
+async function fetchDatabaseEntries(notion: Client, databaseId: string): Promise<any[]> {
+  const entries: any[] = []
+  let cursor: string | undefined = undefined
   let hasMore = true
 
   while (hasMore) {
     try {
-      const response = await notion.databases.query({
+      const response: any = await (notion.databases as any).query({
         database_id: databaseId,
         start_cursor: cursor,
         page_size: 100
@@ -141,7 +142,7 @@ async function fetchDatabaseEntries(notion, databaseId) {
       entries.push(...response.results)
 
       hasMore = response.has_more
-      cursor = response.next_cursor
+      cursor = response.next_cursor || undefined
     } catch (error) {
       console.error(`Error fetching database ${databaseId}:`, error)
       break
@@ -151,14 +152,13 @@ async function fetchDatabaseEntries(notion, databaseId) {
   return entries
 }
 
-// Main sync handler
-export default async function handler(req, res) {
+export default async function handler(req: IncomingMessage & { body?: any }, res: ServerResponse & { status: (code: number) => { json: (data: any) => void } }) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const { accessToken, lastSyncTime, pageId, databaseId } = req.body
+    const { accessToken, lastSyncTime, pageId, databaseId } = req.body || {}
 
     if (!accessToken) {
       return res.status(400).json({ error: 'Missing access token' })

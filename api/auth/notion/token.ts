@@ -1,9 +1,11 @@
-export default async function handler(req, res) {
+import type { IncomingMessage, ServerResponse } from 'http'
+
+export default async function handler(req: IncomingMessage & { body?: any }, res: ServerResponse & { status: (code: number) => { json: (data: any) => void } }) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { code, redirect_uri } = req.body
+  const { code, redirect_uri } = req.body || {}
 
   if (!code) {
     return res.status(400).json({ error: 'Missing authorization code' })
