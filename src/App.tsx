@@ -479,6 +479,7 @@ const App: React.FC = () => {
 
     if (!activeItem.id) {
       // Static fallback data
+      console.log('%c[Notion Explorer Debug]%c Selected Static Fallback Data:', 'color: #ea580c; font-weight: bold; font-size: 11px;', 'color: inherit;', activeItem);
       setLoadedPreviewData({
         isStatic: true,
         cover: activeItem.cover || null,
@@ -503,6 +504,7 @@ const App: React.FC = () => {
           const pageData = await loadPage(activeItem.id)
           if (!active) return
           if (pageData) {
+            console.log('%c[Notion Explorer Debug]%c Selected Page Local JSON (from IndexedDB):', 'color: #9c27b0; font-weight: bold; font-size: 11px;', 'color: inherit;', pageData);
             setLoadedPreviewData({
               isStatic: false,
               type: 'page',
@@ -523,6 +525,7 @@ const App: React.FC = () => {
           const dbData = await loadDatabase(activeItem.id)
           if (!active) return
           if (dbData) {
+            console.log('%c[Notion Explorer Debug]%c Selected Database Local JSON (from IndexedDB):', 'color: #007aff; font-weight: bold; font-size: 11px;', 'color: inherit;', dbData);
             setLoadedPreviewData({
               isStatic: false,
               type: 'database',
